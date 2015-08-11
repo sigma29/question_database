@@ -269,6 +269,31 @@ class Reply
     results.map{|result| Reply.new(result)}
   end
 
+  def save
+    if id.nil?
+     QuestionsDatabase.instance.execute(<<-SQL, body, question_id,parent_reply_id,author_id)
+       INSERT INTO
+        replies(body, question_id,parent_reply_id,author_id)
+       VALUES
+        (?,?,?,?)
+       SQL
+
+      @id = QuestionsDatabase.instance.last_insert_row_id
+    else
+      QuestionsDatabase.instance.execute(<<-SQL, body, question_id,parent_reply_id,author_id, id)
+        UPDATE
+          replies
+        SET
+          body = (?),
+          question_id = (?),
+          parent_reply_id = (?),
+          author_id = (?)
+        WHERE
+          id = (?)
+      SQL
+    end
+  end
+
 end
 
 class QuestionFollow
@@ -470,6 +495,16 @@ if __FILE__ == $PROGRAM_NAME
   saveuser.lname = 'Club'
   saveuser.save
   p User.find_by_id(id)
+  savereply = Reply.new
+  savereply.body = "Please save me"
+  savereply.question_id = 2
+  savereply.author_id = 1
+
+  reply_id = savereply.save
+
+  savereply.body = "I haz been saved?"
+  savereply.save
+  p Reply.find_by_id(reply_id)
 
 
 
