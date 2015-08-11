@@ -45,6 +45,10 @@ class Question
     QuestionFollow.most_followed_questions(n)
   end
 
+  def self.most_liked(n)
+    QuestionLike.most_liked_questions(n)
+  end
+
   attr_accessor :id, :title, :body, :author_id
 
   def initialize(opts = {})
@@ -73,6 +77,8 @@ class Question
   def num_likes
     QuestionLike.num_likes_for_question_id(id)
   end
+
+
 
 end
 
@@ -119,6 +125,10 @@ class User
 
   def followed_questions
     QuestionFollow.followed_questions_for_user_id(id)
+  end
+
+  def liked_questions
+    QuestionLike.liked_questions_for_user_id(id)
   end
 
 end
@@ -253,9 +263,9 @@ class QuestionFollow
         questions.body,
         questions.author_id
       FROM
-        question_follows
-      JOIN
         questions
+      LEFT OUTER JOIN
+        question_follows
       ON
         questions.id = question_follows.question_id
       GROUP BY
@@ -315,9 +325,13 @@ class QuestionLike
   def self.num_likes_for_question_id(question_id)
     results = QuestionsDatabase.instance.execute(<<-SQL, question_id)
       SELECT
-        COUNT(id) AS like_count
+        COUNT(question_likes.id) AS like_count
       FROM
+        questions
+      LEFT OUTER JOIN
         question_likes
+      ON
+        question_likes.question_id = questions.id
       WHERE
         question_likes.question_id = (?)
     SQL
@@ -341,7 +355,31 @@ class QuestionLike
       WHERE
         question_likes.user_id = (?)
     SQL
-     p results
+
+    results.map { |result| Question.new(result) }
+  end
+
+  def self.most_liked_questions(n)
+    results = QuestionsDatabase.instance.execute(<<-SQL)
+      SELECT
+        questions.id,
+        questions.title,
+        questions.body,
+        questions.author_id
+      FROM
+        questions
+      LEFT OUTER JOIN
+        question_likes
+      ON
+        question_likes.question_id = questions.id
+      GROUP BY
+        questions.id
+      ORDER BY
+        COUNT(question_likes.id) DESC
+      LIMIT #{n}
+
+    SQL
+
     results.map { |result| Question.new(result) }
   end
 
@@ -366,6 +404,11 @@ if __FILE__ == $PROGRAM_NAME
   p QuestionLike.liked_questions_for_user_id(2)
   p q.first.likers
   p q.first.num_likes
-
+  user = User.find_by_id(2)
+  p user.first.liked_questions
+  p QuestionLike.most_liked_questions(2)
+  p QuestionLike.num_likes_for_question_id(2)
+  p QuestionFollow.most_followed_questions(3)
+  p Question.most_liked(3)
 
 end
