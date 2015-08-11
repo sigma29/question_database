@@ -41,6 +41,10 @@ class Question
     results.map! { |result| Question.new(result) }
   end
 
+  def self.most_followed(n)
+    QuestionFollow.most_followed_questions(n)
+  end
+
   attr_accessor :id, :title, :body, :author_id
 
   def initialize(opts = {})
@@ -280,6 +284,39 @@ class QuestionLike
 
   end
 
+  def self.likers_for_question_id(question_id)
+    results = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+      SELECT
+        users.id,
+        users.fname,
+        users.lname
+      FROM
+        question_likes
+      JOIN
+        users
+      ON
+        users.id = question_likes.user_id
+      WHERE
+        question_likes.question_id = (?)
+    SQL
+
+    results.map { |result| User.new(result) }
+
+  end
+
+  def self.num_likes_for_question_id(question_id)
+    results = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+      SELECT
+        COUNT(id) AS like_count
+      FROM
+        question_likes
+      WHERE
+        question_likes.question_id = (?)
+    SQL
+
+    results.first['like_count']
+  end
+
   attr_accessor :id, :question_id, :user_id
 
   def initialize(opts = {})
@@ -309,7 +346,9 @@ if __FILE__ == $PROGRAM_NAME
   p u.first.followed_questions
   p q.first.followers
 
-  p QuestionFollow.most_followed_questions(2)
+  p Question.most_followed(2)
+  p QuestionLike.likers_for_question_id(1)
+  p QuestionLike.num_likes_for_question_id(1)
 
 
 end
