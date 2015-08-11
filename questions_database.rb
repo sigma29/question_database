@@ -14,19 +14,30 @@ class QuestionsDatabase < SQLite3::Database
 
 end
 
-class Question
+class TableModel
+  TABLES_HASH = {
+    :Question => "questions",
+    :User => "users",
+    :Reply => "replies",
+    :QuestionLike => "question_likes",
+    :QuestionFollow => "question_follows"
+    }
   def self.find_by_id(id)
     results = QuestionsDatabase.instance.execute(<<-SQL, id)
       SELECT
         *
       FROM
-        questions
+        #{TABLES_HASH[self.to_s.to_sym]}
       WHERE
-       questions.id = (?)
+        #{TABLES_HASH[self.to_s.to_sym]}.id = (?)
     SQL
 
-    results.map { |result| Question.new(result) }
+
+    results.map { |result| self.new(result) }
   end
+end
+
+class Question < TableModel
 
   def self.find_by_author_id(author_id)
     results = QuestionsDatabase.instance.execute(<<-SQL, author_id)
@@ -105,18 +116,7 @@ class Question
 
 end
 
-class User
-  def self.find_by_id(id)
-    results = QuestionsDatabase.instance.execute(<<-SQL, id)
-      SELECT
-        *
-      FROM
-        users
-      WHERE
-       users.id = (?)
-    SQL
-    results.map { |result| User.new(result) }
-  end
+class User < TableModel
 
   def self.find_by_name(fname, lname)
     results = QuestionsDatabase.instance.execute(<<-SQL, fname, lname)
@@ -197,18 +197,7 @@ class User
   end
 end
 
-class Reply
-  def self.find_by_id(id)
-    results = QuestionsDatabase.instance.execute(<<-SQL, id)
-      SELECT
-        *
-      FROM
-        replies
-      WHERE
-       replies.id = (?)
-    SQL
-    results.map { |result| Reply.new(result) }
-  end
+class Reply < TableModel
 
   def self.find_by_user_id(user_id)
     results = QuestionsDatabase.instance.execute(<<-SQL, user_id)
@@ -266,7 +255,7 @@ class Reply
        replies.parent_reply_id = (?)
     SQL
 
-    results.map{|result| Reply.new(result)}
+    results.map { |result| Reply.new(result) }
   end
 
   def save
@@ -296,25 +285,12 @@ class Reply
 
 end
 
-class QuestionFollow
-  def self.find_by_id(id)
-    results = QuestionsDatabase.instance.execute(<<-SQL, id)
-      SELECT
-        *
-      FROM
-        question_follows
-      WHERE
-        question_follows.id = (?)
-    SQL
-    results.map { |result| QuestionFollow.new(result) }
-  end
+class QuestionFollow < TableModel
 
   def self.followers_for_question_id(question_id)
     results = QuestionsDatabase.instance.execute(<<-SQL, question_id)
       SELECT
-        users.id,
-        users.fname,
-        users.lname
+        users.*
       FROM
         question_follows
       JOIN
@@ -329,10 +305,7 @@ class QuestionFollow
   def self.followed_questions_for_user_id(user_id)
     results = QuestionsDatabase.instance.execute(<<-SQL, user_id)
       SELECT
-        questions.id,
-        questions.title,
-        questions.body,
-        questions.author_id
+        questions.*
       FROM
         question_follows
       JOIN
@@ -347,10 +320,7 @@ class QuestionFollow
   def self.most_followed_questions(n)
     results = QuestionsDatabase.instance.execute(<<-SQL ,n)
       SELECT
-        questions.id,
-        questions.title,
-        questions.body,
-        questions.author_id
+        questions.*
       FROM
         questions
       LEFT OUTER JOIN
@@ -376,27 +346,12 @@ class QuestionFollow
   end
 end
 
-class QuestionLike
-  def self.find_by_id(id)
-    results = QuestionsDatabase.instance.execute(<<-SQL, id)
-      SELECT
-        *
-      FROM
-        question_likes
-      WHERE
-        question_likes.id = (?)
-    SQL
-
-    results.map { |result| QuestionLike.new(result) }
-
-  end
+class QuestionLike < TableModel
 
   def self.likers_for_question_id(question_id)
     results = QuestionsDatabase.instance.execute(<<-SQL, question_id)
       SELECT
-        users.id,
-        users.fname,
-        users.lname
+        users.*
       FROM
         question_likes
       JOIN
@@ -431,10 +386,7 @@ class QuestionLike
   def self.liked_questions_for_user_id(user_id)
     results = QuestionsDatabase.instance.execute(<<-SQL, user_id)
       SELECT
-        questions.id,
-        questions.title,
-        questions.body,
-        questions.author_id
+        questions.*
       FROM
         question_likes
       JOIN
@@ -451,10 +403,7 @@ class QuestionLike
   def self.most_liked_questions(n)
     results = QuestionsDatabase.instance.execute(<<-SQL,n)
       SELECT
-        questions.id,
-        questions.title,
-        questions.body,
-        questions.author_id
+        questions.*
       FROM
         questions
       LEFT OUTER JOIN
@@ -465,7 +414,8 @@ class QuestionLike
         questions.id
       ORDER BY
         COUNT(question_likes.id) DESC
-      LIMIT (?)
+      LIMIT
+      (?)
 
     SQL
 
@@ -485,26 +435,27 @@ if __FILE__ == $PROGRAM_NAME
 
 
   #p User.find_by_id(1)
-  saveuser = User.new
-  saveuser.fname = 'Breakfast'
-  saveuser.lname= "at Tiffany's"
-  saveuser.save
-
-  id = User.find_by_name('Breakfast',"at Tiffany's").first.id
-  p id
-  saveuser.lname = 'Club'
-  saveuser.save
-  p User.find_by_id(id)
+  # saveuser = User.new
+  # saveuser.fname = 'Breakfast'
+  # saveuser.lname= "at Tiffany's"
+  # saveuser.save
+  #
+  # id = User.find_by_name('Breakfast',"at Tiffany's").first.id
+  # p id
+  # saveuser.lname = 'Club'
+  # saveuser.save
+  # p User.find_by_id(id)
   savereply = Reply.new
   savereply.body = "Please save me"
   savereply.question_id = 2
   savereply.author_id = 1
 
   reply_id = savereply.save
+  p savereply
 
   savereply.body = "I haz been saved?"
   savereply.save
-  p Reply.find_by_id(reply_id)
+  p Reply.find_by_id(1)
 
 
 
