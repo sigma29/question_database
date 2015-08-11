@@ -66,6 +66,22 @@ class User
     results.map { |result| User.new(result) }
   end
 
+  def self.find_by_name(fname, lname)
+    results = QuestionsDatabase.instance.execute(<<-SQL, fname, lname)
+      SELECT
+        *
+      FROM
+        users
+      WHERE
+       users.fname = (?) AND users.lname = (?)
+    SQL
+    results.map { |result| User.new(result) }
+  end
+
+  def self.authored_questions(author_id)
+    Question.find_by_author_id(author_id)
+  end
+
   attr_accessor :id, :fname, :lname
 
   def initialize(opts = {})
@@ -85,6 +101,30 @@ class Reply
         replies
       WHERE
        replies.id = (?)
+    SQL
+    results.map { |result| Reply.new(result) }
+  end
+
+  def self.find_by_user_id(user_id)
+    results = QuestionsDatabase.instance.execute(<<-SQL, user_id)
+      SELECT
+        *
+      FROM
+        replies
+      WHERE
+       replies.author_id = (?)
+    SQL
+    results.map { |result| Reply.new(result) }
+  end
+
+  def self.find_by_question_id(question_id)
+    results = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+      SELECT
+        *
+      FROM
+        replies
+      WHERE
+       replies.question_id = (?)
     SQL
     results.map { |result| Reply.new(result) }
   end
@@ -148,4 +188,10 @@ end
 if __FILE__ == $PROGRAM_NAME
   q = Question.find_by_id(1)
   p q
+  # r = Reply.find_by_question_id(2)
+  # p r
+  u = User.find_by_name('Leah', 'Itagaki')
+  p u.first
+   q = User.authored_questions(u.first.id)
+   p q
 end
