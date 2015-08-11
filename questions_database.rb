@@ -32,9 +32,40 @@ class TableModel
         #{TABLES_HASH[self.to_s.to_sym]}.id = (?)
     SQL
 
-
     results.map { |result| self.new(result) }
   end
+
+  def save
+    if id.nil?
+      create
+    else
+    end
+  end
+
+  def create
+    raise "You already exist!" unless id.nil?
+    columns = self.instance_variables.map do |var|
+      length = var.length
+      var.to_s[1,length -1]
+    end
+
+    columns = columns.select { |col| col != "id" }
+
+    values = []
+
+    columns_proc = columns.map { |col| Proc.new {self".#{col}"} }
+
+    columns_proc.each { |prc| values << prc.call }
+
+    QuestionsDatabase.instance.execute(<<-SQL)
+      INSERT INTO
+        #{TABLES_HASH[self.class.to_s.to_sym]}(#{columns.join(",")})
+      VALUES
+        (#{values.join(",")})
+    SQL
+
+  end
+
 end
 
 class Question < TableModel
@@ -258,30 +289,30 @@ class Reply < TableModel
     results.map { |result| Reply.new(result) }
   end
 
-  def save
-    if id.nil?
-     QuestionsDatabase.instance.execute(<<-SQL, body, question_id,parent_reply_id,author_id)
-       INSERT INTO
-        replies(body, question_id,parent_reply_id,author_id)
-       VALUES
-        (?,?,?,?)
-       SQL
-
-      @id = QuestionsDatabase.instance.last_insert_row_id
-    else
-      QuestionsDatabase.instance.execute(<<-SQL, body, question_id,parent_reply_id,author_id, id)
-        UPDATE
-          replies
-        SET
-          body = (?),
-          question_id = (?),
-          parent_reply_id = (?),
-          author_id = (?)
-        WHERE
-          id = (?)
-      SQL
-    end
-  end
+  # def save
+  #   if id.nil?
+  #    QuestionsDatabase.instance.execute(<<-SQL, body, question_id,parent_reply_id,author_id)
+  #      INSERT INTO
+  #       replies(body, question_id,parent_reply_id,author_id)
+  #      VALUES
+  #       (?,?,?,?)
+  #      SQL
+  #
+  #     @id = QuestionsDatabase.instance.last_insert_row_id
+  #   else
+  #     QuestionsDatabase.instance.execute(<<-SQL, body, question_id,parent_reply_id,author_id, id)
+  #       UPDATE
+  #         replies
+  #       SET
+  #         body = (?),
+  #         question_id = (?),
+  #         parent_reply_id = (?),
+  #         author_id = (?)
+  #       WHERE
+  #         id = (?)
+  #     SQL
+  #   end
+  # end
 
 end
 
@@ -451,11 +482,11 @@ if __FILE__ == $PROGRAM_NAME
   savereply.author_id = 1
 
   reply_id = savereply.save
-  p savereply
+  # p savereply
 
   savereply.body = "I haz been saved?"
   savereply.save
-  p Reply.find_by_id(1)
+  # p Reply.find_by_id(1)
 
 
 
