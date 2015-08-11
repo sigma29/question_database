@@ -131,6 +131,25 @@ class User
     QuestionLike.liked_questions_for_user_id(id)
   end
 
+  def average_karma
+    results = QuestionsDatabase.instance.execute(<<-SQL, id)
+      SELECT
+        CAST(COUNT(question_likes.id) AS FLOAT) / COUNT(questions.id) AS avg_likes_per_question
+      FROM
+        questions
+      LEFT OUTER JOIN
+        question_likes
+      ON
+        questions.id = question_likes.question_id
+      WHERE
+       questions.author_id = (?)
+      GROUP BY
+        questions.id
+    SQL
+
+    results.first['avg_likes_per_question']
+  end
+
 end
 
 class Reply
@@ -256,7 +275,7 @@ class QuestionFollow
   end
 
   def self.most_followed_questions(n)
-    results = QuestionsDatabase.instance.execute(<<-SQL )
+    results = QuestionsDatabase.instance.execute(<<-SQL ,n)
       SELECT
         questions.id,
         questions.title,
@@ -272,7 +291,7 @@ class QuestionFollow
         questions.id
       ORDER BY
         COUNT(question_follows.id) DESC
-      LIMIT #{n}
+      LIMIT (?)
     SQL
     results.map { |result| Question.new(result) }
   end
@@ -360,7 +379,7 @@ class QuestionLike
   end
 
   def self.most_liked_questions(n)
-    results = QuestionsDatabase.instance.execute(<<-SQL)
+    results = QuestionsDatabase.instance.execute(<<-SQL,n)
       SELECT
         questions.id,
         questions.title,
@@ -376,7 +395,7 @@ class QuestionLike
         questions.id
       ORDER BY
         COUNT(question_likes.id) DESC
-      LIMIT #{n}
+      LIMIT (?)
 
     SQL
 
@@ -410,5 +429,9 @@ if __FILE__ == $PROGRAM_NAME
   p QuestionLike.num_likes_for_question_id(2)
   p QuestionFollow.most_followed_questions(3)
   p Question.most_liked(3)
+  p user.first.average_karma
+  user1 = User.find_by_id(1)
+  p user1.first.average_karma
+
 
 end
