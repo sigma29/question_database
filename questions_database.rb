@@ -78,6 +78,29 @@ class Question
     QuestionLike.num_likes_for_question_id(id)
   end
 
+  def save
+    if id.nil?
+     QuestionsDatabase.instance.execute(<<-SQL, title, body, author_id)
+      INSERT INTO
+        questions(title, body, author_id)
+      VALUES
+        (?,?,?)
+     SQL
+
+     @id = QuestionsDatabase.instance.last_insert_row_id
+   else
+     QuestionsDatabase.instance.execute(<<-SQL,title, body, author_id, id)
+     UPDATE
+      questions
+     SET
+       title = (?),
+       body = (?),
+       author_id = (?)
+     WHERE
+       id = (?)
+     SQL
+   end
+  end
 
 
 end
@@ -412,26 +435,38 @@ class QuestionLike
 end
 
 if __FILE__ == $PROGRAM_NAME
-  q = Question.find_by_id(1)
-  p q
+  # q = Question.find_by_id(1)
+  # p q
 
 
+  #
+  # p Question.most_followed(2)
+  # p QuestionLike.likers_for_question_id(1)
+  # p QuestionLike.num_likes_for_question_id(1)
+  # p QuestionLike.liked_questions_for_user_id(2)
+  # p q.first.likers
+  # p q.first.num_likes
+  # user = User.find_by_id(2)
+  # p user.first.liked_questions
+  # p QuestionLike.most_liked_questions(2)
+  # p QuestionLike.num_likes_for_question_id(2)
+  # p QuestionFollow.most_followed_questions(3)
+  # p Question.most_liked(3)
+  # p user.first.average_karma
+  # user1 = User.find_by_id(1)
+  # p user1.first.average_karma
 
-  p Question.most_followed(2)
-  p QuestionLike.likers_for_question_id(1)
-  p QuestionLike.num_likes_for_question_id(1)
-  p QuestionLike.liked_questions_for_user_id(2)
-  p q.first.likers
-  p q.first.num_likes
-  user = User.find_by_id(2)
-  p user.first.liked_questions
-  p QuestionLike.most_liked_questions(2)
-  p QuestionLike.num_likes_for_question_id(2)
-  p QuestionFollow.most_followed_questions(3)
-  p Question.most_liked(3)
-  p user.first.average_karma
-  user1 = User.find_by_id(1)
-  p user1.first.average_karma
+  p Question.find_by_author_id(1)
+  savequestion = Question.new({})
+  savequestion.title = 'Save me'
+  savequestion.body = 'Pretty Please'
+  savequestion.author_id = 1
+  p Question.find_by_author_id(1)
+  savequestion.save
 
+  p Question.find_by_author_id(1)
+  savequestion.title = 'I have been saved'
+  savequestion.save
+  p Question.find_by_author_id(1)
 
 end
