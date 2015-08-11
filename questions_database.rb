@@ -317,6 +317,26 @@ class QuestionLike
     results.first['like_count']
   end
 
+  def self.liked_questions_for_user_id(user_id)
+    results = QuestionsDatabase.instance.execute(<<-SQL, user_id)
+      SELECT
+        questions.id,
+        questions.title,
+        questions.body,
+        questions.author_id
+      FROM
+        question_likes
+      JOIN
+        questions
+      ON
+        question_likes.question_id = questions.id
+      WHERE
+        question_likes.user_id = (?)
+    SQL
+     p results
+    results.map { |result| Question.new(result) }
+  end
+
   attr_accessor :id, :question_id, :user_id
 
   def initialize(opts = {})
@@ -349,6 +369,7 @@ if __FILE__ == $PROGRAM_NAME
   p Question.most_followed(2)
   p QuestionLike.likers_for_question_id(1)
   p QuestionLike.num_likes_for_question_id(1)
+  p QuestionLike.liked_questions_for_user_id(2)
 
 
 end
