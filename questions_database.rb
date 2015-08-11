@@ -1,5 +1,6 @@
 require 'sqlite3'
 require 'singleton'
+require 'byebug'
 
 class QuestionsDatabase < SQLite3::Database
   include Singleton
@@ -21,18 +22,32 @@ class Question
       FROM
         questions
       WHERE
-       question.id = (?)
+       questions.id = (?)
     SQL
+
     results.map { |result| Question.new(result) }
+  end
+
+  def self.find_by_author_id(author_id)
+    results = QuestionsDatabase.instance.execute(<<-SQL, author_id)
+      SELECT
+        *
+      FROM
+        questions
+      WHERE
+        questions.author_id = (?)
+    SQL
+
+    results.map! { |result| Question.new(result) }
   end
 
   attr_accessor :id, :title, :body, :author_id
 
   def initialize(opts = {})
-    @id = opts[id]
-    @title = opts[title]
-    @body = opts[body]
-    @author_id = opts[author_id]
+    @id = opts["id"]
+    @title = opts["title"]
+    @body = opts["body"]
+    @author_id = opts["author_id"]
   end
 
 
@@ -54,9 +69,9 @@ class User
   attr_accessor :id, :fname, :lname
 
   def initialize(opts = {})
-    @id = opts[id]
-    @fname = opts[fname]
-    @lname = opts[lname]
+    @id = opts["id"]
+    @fname = opts["fname"]
+    @lname = opts["lname"]
   end
 
 end
@@ -77,11 +92,11 @@ class Reply
   attr_accessor :id, :body, :question_id, :parent_reply_id, :author_id
 
   def initialize(opts = {})
-    @id = opts[id]
-    @body = opts[body]
-    @question_id = opts[question_id]
-    @parent_reply_id = opts[parent_reply_id]
-    @author_id = opts[author_id]
+    @id = opts["id"]
+    @body = opts["body"]
+    @question_id = opts["question_id"]
+    @parent_reply_id = opts["parent_reply_id"]
+    @author_id = opts["author_id"]
   end
 end
 
@@ -101,9 +116,9 @@ class QuestionFollow
   attr_accessor :id, :question_id, :user_id
 
   def initialize(opts = {})
-    @id = opts[id]
-    @question_id = opts[question_id]
-    @user_id = opts[user_id]
+    @id = opts["id"]
+    @question_id = opts["question_id"]
+    @user_id = opts["user_id"]
   end
 end
 
@@ -117,14 +132,20 @@ class QuestionLike
       WHERE
         question_likes.id = (?)
     SQL
+
     results.map { |result| QuestionLike.new(result) }
   end
 
   attr_accessor :id, :question_id, :user_id
 
   def initialize(opts = {})
-    @id = opts[id]
-    @question_id = opts[question_id]
-    @user_id = opts[user_id]
+    @id = opts["id"]
+    @question_id = opts["question_id"]
+    @user_id = opts["user_id"]
   end
+end
+
+if __FILE__ == $PROGRAM_NAME
+  q = Question.find_by_id(1)
+  p q
 end
