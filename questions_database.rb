@@ -50,6 +50,17 @@ class Question
     @author_id = opts["author_id"]
   end
 
+  def author
+    User.find_by_id(author_id)
+  end
+
+  def replies
+    Reply.find_by_question_id(id)
+  end
+
+  def followers
+    QuestionFollow.followers_for_question_id(id)
+  end
 
 end
 
@@ -78,16 +89,24 @@ class User
     results.map { |result| User.new(result) }
   end
 
-  def self.authored_questions(author_id)
-    Question.find_by_author_id(author_id)
-  end
-
   attr_accessor :id, :fname, :lname
 
   def initialize(opts = {})
     @id = opts["id"]
     @fname = opts["fname"]
     @lname = opts["lname"]
+  end
+
+  def authored_questions
+    Question.find_by_author_id(id)
+  end
+
+  def authored_replies
+    Reply.find_by_user_id(id)
+  end
+
+  def followed_questions
+    QuestionFollow.followed_questions_for_user_id(id)
   end
 
 end
@@ -138,6 +157,32 @@ class Reply
     @parent_reply_id = opts["parent_reply_id"]
     @author_id = opts["author_id"]
   end
+
+  def author
+    User.find_by_id(author_id)
+  end
+
+  def question
+    Question.find_by_id(question_id)
+  end
+
+  def parent_reply
+    Reply.find_by_id(parent_reply_id)
+  end
+
+  def child_replies
+    results = QuestionsDatabase.instance.execute(<<-SQL, id)
+      SELECT
+        *
+      FROM
+        replies
+      WHERE
+       replies.parent_reply_id = (?)
+    SQL
+
+    results.map{|result| Reply.new(result)}
+  end
+
 end
 
 class QuestionFollow
@@ -152,6 +197,64 @@ class QuestionFollow
     SQL
     results.map { |result| QuestionFollow.new(result) }
   end
+
+  def self.followers_for_question_id(question_id)
+    results = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+      SELECT
+        users.id,
+        users.fname,
+        users.lname
+      FROM
+        question_follows
+      JOIN
+        users on question_follows.user_id = users.id
+      WHERE
+        question_follows.question_id = (?)
+    SQL
+
+    results.map { |result| User.new(result) }
+  end
+
+  def self.followed_questions_for_user_id(user_id)
+    results = QuestionsDatabase.instance.execute(<<-SQL, user_id)
+      SELECT
+        questions.id,
+        questions.title,
+        questions.body,
+        questions.author_id
+      FROM
+        question_follows
+      JOIN
+        questions on question_follows.question_id = questions.id
+      WHERE
+        question_follows.user_id = (?)
+    SQL
+
+    results.map { |result| Question.new(result) }
+  end
+
+  def self.most_followed_questions(n)
+    results = QuestionsDatabase.instance.execute(<<-SQL )
+      SELECT
+        questions.id,
+        questions.title,
+        questions.body,
+        questions.author_id
+      FROM
+        question_follows
+      JOIN
+        questions
+      ON
+        questions.id = question_follows.question_id
+      GROUP BY
+        questions.id
+      ORDER BY
+        COUNT(question_follows.id) DESC
+      LIMIT #{n}
+    SQL
+    results.map { |result| Question.new(result) }
+  end
+
 
   attr_accessor :id, :question_id, :user_id
 
@@ -174,6 +277,7 @@ class QuestionLike
     SQL
 
     results.map { |result| QuestionLike.new(result) }
+
   end
 
   attr_accessor :id, :question_id, :user_id
@@ -192,6 +296,20 @@ if __FILE__ == $PROGRAM_NAME
   # p r
   u = User.find_by_name('Leah', 'Itagaki')
   p u.first
-   q = User.authored_questions(u.first.id)
+   q = u.first.authored_questions
    p q
+   r = u.first.authored_replies
+   p r
+  p  q.first.replies
+  # question = r.first.question
+  # p question
+  # reply = Reply.find_by_id(2)
+  # p reply.first.child_replies
+  # p QuestionFollow.followed_questions_for_user_id(1)
+  p u.first.followed_questions
+  p q.first.followers
+
+  p QuestionFollow.most_followed_questions(2)
+
+
 end
