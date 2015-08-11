@@ -66,6 +66,14 @@ class Question
     QuestionFollow.followers_for_question_id(id)
   end
 
+  def likers
+    QuestionLike.likers_for_question_id(id)
+  end
+
+  def num_likes
+    QuestionLike.num_likes_for_question_id(id)
+  end
+
 end
 
 class User
@@ -349,27 +357,15 @@ end
 if __FILE__ == $PROGRAM_NAME
   q = Question.find_by_id(1)
   p q
-  # r = Reply.find_by_question_id(2)
-  # p r
-  u = User.find_by_name('Leah', 'Itagaki')
-  p u.first
-   q = u.first.authored_questions
-   p q
-   r = u.first.authored_replies
-   p r
-  p  q.first.replies
-  # question = r.first.question
-  # p question
-  # reply = Reply.find_by_id(2)
-  # p reply.first.child_replies
-  # p QuestionFollow.followed_questions_for_user_id(1)
-  p u.first.followed_questions
-  p q.first.followers
+
+
 
   p Question.most_followed(2)
   p QuestionLike.likers_for_question_id(1)
   p QuestionLike.num_likes_for_question_id(1)
   p QuestionLike.liked_questions_for_user_id(2)
+  p q.first.likers
+  p q.first.num_likes
 
 
 end
